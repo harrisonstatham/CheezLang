@@ -16,6 +16,7 @@ namespace Cheez.Compiler
         public IEnumerable<PTFile> Files => mFiles.Select(kv => kv.Value);
 
         private List<AstStatement> mStatements = new List<AstStatement>();
+
         public IReadOnlyList<AstStatement> Statements => mStatements;
 
         public Scope GlobalScope { get; private set; }
@@ -41,6 +42,11 @@ namespace Cheez.Compiler
             }
         }
 
+        public PTFile GetFile(string file)
+        {
+            return mFiles[file];
+        }
+
         public void RemoveFile(PTFile file)
         {
             mFiles.Remove(file.Name);
@@ -60,13 +66,16 @@ namespace Cheez.Compiler
             GlobalScope.DefineBuiltInTypes();
             GlobalScope.DefineBuiltInOperators();
 
-            var semanticer = new Semanticer();
-            semanticer.DoWork(this, mStatements, mCompiler.ErrorHandler);
+            DeclarationCollector dc = new DeclarationCollector();
+            dc.CollectDeclarations(this, mCompiler.ErrorHandler);
 
-            if (MainFunction == null)
-            {
-                mCompiler.ErrorHandler.ReportError("No main function was specified");
-            }
+            //var semanticer = new Semanticer();
+            //semanticer.DoWork(this, mStatements, mCompiler.ErrorHandler);
+
+            //if (MainFunction == null)
+            //{
+            mCompiler.ErrorHandler.ReportError("No main function was specified");
+            //}
         }
         
         public void ReportError(ILocation location, string errorMessage, [CallerFilePath] string callingFunctionFile = "", [CallerMemberName] string callingFunctionName = "", [CallerLineNumber] int callLineNumber = 0)

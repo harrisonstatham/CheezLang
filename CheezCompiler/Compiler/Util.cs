@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cheez.Compiler.Parsing;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +8,10 @@ using System.Text.RegularExpressions;
 
 namespace Cheez.Compiler
 {
+
+    public class SkipInStackFrame : Attribute
+    { }
+
     public class Reference<T>
     {
         public T Value { get; set; }
@@ -135,6 +140,31 @@ namespace Cheez.Compiler
                 process.BeginErrorReadLine();
 
             return process;
+        }
+
+        [SkipInStackFrame]
+        [DebuggerStepThrough]
+        public static (string function, string file, int line)? GetCallingFunction()
+        {
+            try
+            {
+                var trace = new StackTrace(true);
+                var frames = trace.GetFrames();
+
+                foreach (var frame in frames)
+                {
+                    var method = frame.GetMethod();
+                    var attribute = method.GetCustomAttributesData().FirstOrDefault(d => d.AttributeType == typeof(SkipInStackFrame));
+                    if (attribute != null)
+                        continue;
+
+                    return (method.Name, frame.GetFileName(), frame.GetFileLineNumber());
+                }
+            }
+            catch (Exception)
+            { }
+
+            return null;
         }
     }
 }

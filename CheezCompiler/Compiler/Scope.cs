@@ -151,7 +151,7 @@ namespace Cheez.Compiler
                     return v;
                 }
             }
-            return Parent?.GetSymbol(name);
+            return Parent?.GetSymbol(name, forceAnalyzed);
         }
 
         public bool DefineImplFunction(AstFunctionDecl f)

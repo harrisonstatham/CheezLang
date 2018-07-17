@@ -256,7 +256,7 @@ namespace Cheez.Compiler.Ast
             var str = Name.Name;
             if (Parameters?.Count > 0)
             {
-                str += $"({string.Join(", ", Parameters.Select(p => $"{p.Value}"))})";
+                str += $"({string.Join(", ", Parameters.Select(p => $"{p.Type}"))})";
             }
             return str;
         }
@@ -408,19 +408,21 @@ namespace Cheez.Compiler.Ast
         public ParseTree.PTEnumMember ParseTreeNode { get; set; }
 
         public string Name { get; }
-        public AstExpression Value { get; }
+        public AstExpression ValueExpr { get; }
         public CheezType Type { get; set; }
+
+        public object Value { get; set; }
 
         public AstEnumMember(ParseTree.PTEnumMember node, string name, AstExpression value)
         {
             ParseTreeNode = node;
             this.Name = name;
-            this.Value = value;
+            this.ValueExpr = value;
         }
 
         public AstEnumMember Clone()
         {
-            return new AstEnumMember(ParseTreeNode, Name, Value?.Clone())
+            return new AstEnumMember(ParseTreeNode, Name, ValueExpr?.Clone())
             {
                 Type = this.Type
             };

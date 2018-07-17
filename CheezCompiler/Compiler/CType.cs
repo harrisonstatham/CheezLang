@@ -493,7 +493,7 @@ namespace Cheez.Compiler
             int value = 0;
             foreach (var m in en.Members)
             {
-                Members.Add(m.Name, value++);
+                Members[m.Name] = value++;
             }
         }
 

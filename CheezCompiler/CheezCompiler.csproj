@@ -143,6 +143,7 @@
     <Compile Include="Compiler\Parsing\Lexer.cs" />
     <Compile Include="Compiler\Parsing\Parser.cs" />
     <Compile Include="Compiler\Scope.cs" />
+    <Compile Include="Compiler\SemanticAnalysis\DeclarationCollector.cs" />
     <Compile Include="Compiler\SemanticAnalysis\Semanticer.cs" />
     <Compile Include="Compiler\UniqueNameDecorator.cs" />
     <Compile Include="Compiler\Util.cs" />

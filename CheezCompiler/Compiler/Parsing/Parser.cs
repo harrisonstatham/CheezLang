@@ -6,9 +6,6 @@ using System.Linq;
 
 namespace Cheez.Compiler.Parsing
 {
-    public class SkipInStackFrame : Attribute
-    { }
-
     public class Parser
     {
         private delegate string ErrorMessageResolver(Token t);
@@ -74,36 +71,11 @@ namespace Cheez.Compiler.Parsing
 
         [SkipInStackFrame]
         [DebuggerStepThrough]
-        private (string function, string file, int line)? GetCallingFunction()
-        {
-            try
-            {
-                var trace = new StackTrace(true);
-                var frames = trace.GetFrames();
-
-                foreach (var frame in frames)
-                {
-                    var method = frame.GetMethod();
-                    var attribute = method.GetCustomAttributesData().FirstOrDefault(d => d.AttributeType == typeof(SkipInStackFrame));
-                    if (attribute != null)
-                        continue;
-
-                    return (method.Name, frame.GetFileName(), frame.GetFileLineNumber());
-                }
-            }
-            catch (Exception)
-            { }
-
-            return null;
-        }
-
-        [SkipInStackFrame]
-        [DebuggerStepThrough]
         private void ReportError(TokenLocation location, string message)
         {
             string callingFunctionFile, callingFunctionName;
             int callLineNumber;
-            (callingFunctionFile, callingFunctionName, callLineNumber) = GetCallingFunction().GetValueOrDefault(("", "", -1));
+            (callingFunctionFile, callingFunctionName, callLineNumber) = Util.GetCallingFunction().GetValueOrDefault(("", "", -1));
             mErrorHandler.ReportError(mLexer, new Location(location, location), message, null, callingFunctionFile, callingFunctionName, callLineNumber);
         }
 
@@ -113,7 +85,7 @@ namespace Cheez.Compiler.Parsing
         {
             string callingFunctionFile, callingFunctionName;
             int callLineNumber;
-            (callingFunctionFile, callingFunctionName, callLineNumber) = GetCallingFunction().GetValueOrDefault(("", "", -1));
+            (callingFunctionFile, callingFunctionName, callLineNumber) = Util.GetCallingFunction().GetValueOrDefault(("", "", -1));
             mErrorHandler.ReportError(mLexer, location, message, null, callingFunctionFile, callingFunctionName, callLineNumber);
         }
 
@@ -466,7 +438,7 @@ namespace Cheez.Compiler.Parsing
 
                 var memberName = ParseIdentifierExpr(ErrMsg("identifier", "at enum member"));
 
-                members.Add(new PTEnumMember(memberName, null));
+                members.Add(new PTEnumMember(memberName, null, memberName.Beginning, memberName.End));
 
                 next = PeekToken();
                 if (next.type == TokenType.NewLine || next.type == TokenType.Comma)

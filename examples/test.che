@@ -2,39 +2,32 @@
 // #load("examples/glfw3_example.che")
 // #load("examples/trait_function_call_performance.che")
 
-fn foo(i: int) {
-
+enum Type {
+    a, b, c
 }
 
-fn foo(i: string) {
-
+struct Foo {
+    a: int
+    b: int[]
+    c: int[3]
+    d: Wrapper(int)
 }
 
-fn foo(s: string, i: int) {}
-fn foo(s: string, i: string) {}
-fn foo(s: int, i: int) {}
-fn foo(s: int, i: string) {}
+struct Bar {
+    f: Foo
+    p: Wrapper(int)
+}
 
-// fn foo(x: $T) {
+struct Wrapper(A: type) {
+    value: A
+}
 
+struct Array(ElementType: type, Size: int) {
+    elements: ElementType[Size]
+}
+
+// struct Test(a: type, a: type, b: type, a: type) {
 // }
 
 fn Main() {
-    // signed_distance_field_renderer()
-    // glfw3_example()
-    // trait_function_call_performance()
-
-    // foo(1)
-    // foo("hi")
-
-    // let s = "du"
-    // foo(s)
-
-    // let i = 5
-    // foo(i)
-
-    foo("lol", 123)
-    foo("lol", "du")
-    foo(321, 123)
-    foo(789, "du")
 }

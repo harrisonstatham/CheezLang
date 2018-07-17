@@ -227,15 +227,20 @@ namespace Cheez.Compiler.ParseTree
 
     #region Enum
 
-    public class PTEnumMember
+    public class PTEnumMember : ILocation
     {
         public PTIdentifierExpr Name { get; }
         public PTExpr Value { get; }
 
-        public PTEnumMember(PTIdentifierExpr name, PTExpr value)
+        public TokenLocation Beginning { get; set; }
+        public TokenLocation End { get; set; }
+
+        public PTEnumMember(PTIdentifierExpr name, PTExpr value, TokenLocation beg, TokenLocation end)
         {
             this.Name = name;
             this.Value = value;
+            Beginning = beg;
+            End = end;
         }
 
         public AstEnumMember CreateAst()
