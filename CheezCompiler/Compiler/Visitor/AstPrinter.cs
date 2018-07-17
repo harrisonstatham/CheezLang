@@ -306,13 +306,14 @@ namespace Cheez.Compiler.Visitor
             var args = call.Arguments.Select(a => a.Accept(this, 0));
             var argsStr = string.Join(", ", args);
             var func = call.Function.Accept(this, 0);
+            var argTypes = string.Join(", ", call.Arguments.Select(a => a.Type));
 
-            if (call.Function is AstFunctionExpression fe)
+            if (call.Function is AstFunctionExpression fe && fe.Declaration.PolymorphicTypes != null)
             {
                 func += $"<{string.Join(", ", fe.Declaration.PolymorphicTypes.Select(kv => $"{kv.Key}={kv.Value}"))}>";
             }
 
-            return $"{func}({argsStr})";
+            return $"{func}(/*{argTypes}*/ {argsStr})";
         }
 
         public override string VisitStringLiteral(AstStringLiteral str, int data = 0)

@@ -227,6 +227,13 @@ namespace Cheez.Compiler.SemanticAnalysis
         {
             ErrorHandler.ReportError(Text, location, message, subErrors, callingFunctionFile, callingFunctionName, callLineNumber);
         }
+
+        public void ReportError(Error error, [CallerFilePath] string callingFunctionFile = "", [CallerMemberName] string callingFunctionName = "", [CallerLineNumber] int callLineNumber = 0)
+        {
+            if (error.Text == null)
+                error.Text = Text;
+            ErrorHandler.ReportError(error, callingFunctionFile, callingFunctionName, callLineNumber);
+        }
     }
 
     public class Semanticer : VisitorBase<IEnumerable<object>, SemanticerData>
@@ -847,6 +854,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                 function.ImplBlock.FunctionInstances.Add(function);
             }
 
+            // if this function is polymorphic, but not a polymorphic instance
             if (!function.IsPolyInstance && ((function.ReturnTypeExpr?.IsPolymorphic ?? false) || function.Parameters.Any(p => p.TypeExpr.IsPolymorphic)))
             {
                 function.IsGeneric = true;
@@ -864,7 +872,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                         context.ReportError(function.Name.GenericParseTreeNode, $"Duplicate name: {function.Name}");
                     }
                 }
-                else if (!function.Scope.DefineSymbol(function))
+                else if (!function.Scope.DefineFunction(function))
                 {
                     context.ReportError(function.Name.GenericParseTreeNode, $"Duplicate name: {function.Name}");
                 }
@@ -932,7 +940,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                         context.ReportError(function.Name.GenericParseTreeNode, $"Duplicate name: {function.Name}");
                     }
                 }
-                else if (!function.Scope.DefineSymbol(function))
+                else if (!function.Scope.DefineFunction(function))
                 {
                     context.ReportError(function.Name.GenericParseTreeNode, $"A function or variable with name '{function.Name}' already exists in current scope");
                 }
@@ -2718,6 +2726,134 @@ namespace Cheez.Compiler.SemanticAnalysis
             call.Function = new AstFunctionExpression(call.Function.GenericParseTreeNode, instance, call.Function);
         }
 
+        private IEnumerable<object> MatchExpressionToType(AstExpression ex, CheezType type, SemanticerData context)
+        {
+            ex.Scope = context.Scope;
+            //if (ex.Type == type)
+            //    yield break;
+
+            if (type is PolyType p)
+            {
+
+            }
+
+            switch (ex)
+            {
+                case AstNumberExpr num:
+                    {
+                        if (num.Data.Type == NumberData.NumberType.Float && type is IntType)
+                        {
+                            context.ReportError(num.GenericParseTreeNode, "Can't implicitly convert a float value to an int");
+                        }
+                        else if (type is FloatType || type is IntType)
+                        {
+                            num.Type = type;
+                        }
+                        else
+                        {
+                            context.ReportError(num.GenericParseTreeNode, $"Can't implicitly convert '{ex}' to type {type}");
+                        }
+
+
+                        yield break;
+                    }
+
+                case AstStringLiteral str:
+                    {
+                        str.Type = CheezType.String;
+                        if (str.Type != type)
+                        {
+                            context.ReportError(str.GenericParseTreeNode, $"Can't implicitly convert string to {type}");
+                        }
+                        yield break;
+                    }
+
+                case AstIdentifierExpr id:
+                    {
+                        foreach (var v in id.Accept(this, context))
+                        {
+                            if (v is ReplaceAstExpr r)
+                                throw new NotImplementedException();
+                            else
+                                yield return v;
+                        }
+
+                        if (id.Type != type)
+                        {
+                            context.ReportError(ex.GenericParseTreeNode, $"Can't implicitly convert {id.Type} to {type}");
+                        }
+
+                        yield break;
+                    }
+
+                default:
+                    context.ReportError($"Case {ex.GetType().Name} not implemented yet");
+                    yield break;
+            }
+        }
+
+        private IEnumerable<object> MatchCallToFunctions(AstCallExpr call, List<AstFunctionDecl> functions, SemanticerData context)
+        {
+            List<AstFunctionDecl> candidates = new List<AstFunctionDecl>();
+            Console.WriteLine($"{functions.Count} candidates for call {call}: \n  {string.Join("\n  ", functions)}");
+            
+            foreach (var cand in functions)
+            {
+                if (cand.Parameters.Count == call.Arguments.Count)
+                    candidates.Add(cand);
+            }
+            Console.WriteLine($"{candidates.Count} candidates for call {call}: \n  {string.Join("\n  ", candidates)}");
+
+            //
+            var candidatesMatchingTypes = new List<(AstFunctionDecl func, List<AstExpression> args)>();
+            foreach (var cand in candidates)
+            {
+                var args = call.Arguments.Select(a => a.Clone()).ToList();
+                
+                var types = new Dictionary<string, CheezType>();
+
+                var eh = new SilentErrorHandler();
+
+                // find out types of generic parameters
+                for (int i = 0; i < args.Count; i++)
+                {
+                    var arg = args[i];
+                    var param = cand.Parameters[i];
+
+                    foreach (var v in MatchExpressionToType(arg, param.Type, context.Clone(ErrorHandler: eh)))
+                        yield return v;
+                }
+                
+                if (!eh.HasErrors)
+                {
+                    candidatesMatchingTypes.Add((cand, args));
+                }
+            }
+            Console.WriteLine($"{candidatesMatchingTypes.Count} candidates for call {call}: \n  {string.Join("\n  ", candidatesMatchingTypes.Select(c => c.func))}");
+
+            if (candidatesMatchingTypes.Count == 0)
+            {
+                context.ReportError(call.GenericParseTreeNode, "No function matches call");
+            }
+            else if (candidatesMatchingTypes.Count > 1)
+            {
+                context.ReportError(new Error
+                {
+                    Location = call.GenericParseTreeNode,
+                    Message = $"More than one function matches call",
+                    Details = new List<string> { $"Matching functions:" }.Concat(candidatesMatchingTypes.Select(c => $"{c.func.GenericParseTreeNode.Beginning.line,2}> {c.func}")).ToList()
+                });
+            }
+            else
+            {
+                var (func, argList) = candidatesMatchingTypes[0];
+                call.Arguments = argList;
+                call.Function = new AstFunctionExpression(call.Function.GenericParseTreeNode, func, call.Function);
+            }
+
+            yield break;
+        }
+
         public override IEnumerable<object> VisitCallExpression(AstCallExpr call, SemanticerData context = null)
         {
             var scope = context.Scope;
@@ -2764,6 +2900,12 @@ namespace Cheez.Compiler.SemanticAnalysis
                             yield return v;
                     }
                 }
+            }
+            else if (call.Function.Type == CheezType.FunctionList)
+            {
+                var flist = call.Function.Value as FunctionList;
+                foreach (var v in MatchCallToFunctions(call, flist.Functions, context))
+                    yield return v;
             }
 
             if (call.Function.Type is FunctionType f)
@@ -2858,6 +3000,11 @@ namespace Cheez.Compiler.SemanticAnalysis
             {
                 ident.Type = comp.Type;
                 ident.Value = comp.Value;
+            }
+            else if (v is FunctionList f)
+            {
+                ident.Type = CheezType.FunctionList;
+                ident.Value = f;
             }
             else if (v is ITypedSymbol ts)
             {
@@ -3629,6 +3776,17 @@ namespace Cheez.Compiler.SemanticAnalysis
 
                 case AstTypeExpr t:
                     yield return t.Type;
+                    yield break;
+
+                case AstNumberExpr n:
+                    if (n.Data.Type == NumberData.NumberType.Float)
+                        yield return FloatType.LiteralType;
+                    else
+                        yield return IntType.LiteralType;
+                    yield break;
+
+                case AstStringLiteral s:
+                    yield return StringType.Instance;
                     yield break;
 
                 default:

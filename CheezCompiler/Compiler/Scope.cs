@@ -55,28 +55,10 @@ namespace Cheez.Compiler
 
     public class FunctionList : ISymbol
     {
-        public CheezType Type => throw new System.NotImplementedException();
-
-        public bool IsConstant => throw new System.NotImplementedException();
-
-        public AstIdentifierExpr Name => throw new System.NotImplementedException();
+        public bool IsConstant => true;
+        public AstIdentifierExpr Name { get; set; }
+        public List<AstFunctionDecl> Functions { get; } = new List<AstFunctionDecl>();
     }
-
-    //public class CheezTypeSymbol : ISymbol
-    //{
-    //    public AstIdentifierExpr Name { get; }
-    //    public CheezType Type { get; }
-    //    public CheezType Value { get; set; }
-
-    //    public bool IsConstant => true;
-
-    //    public CheezTypeSymbol(AstIdentifierExpr name, CheezType type)
-    //    {
-    //        this.Name = name;
-    //        this.Value = type;
-    //        this.Type = CheezType.Type;
-    //    }
-    //}
 
     public class Scope
     {
@@ -113,15 +95,108 @@ namespace Cheez.Compiler
             };
         }
 
-        //public CheezType GetCheezType(PTTypeExpr expr)
-        //{
-        //    return types.GetCheezType(expr) ?? Parent?.GetCheezType(expr);
-        //}
+        public bool DefineSymbol(ISymbol symbol)
+        {
+            if (mSymbolTable.ContainsKey(symbol.Name.Name))
+                return false;
 
-        //public CheezType GetCheezType(string name)
-        //{
-        //    return types.GetCheezType(name) ?? Parent?.GetCheezType(name);
-        //}
+            mSymbolTable[symbol.Name.Name] = symbol;
+            return true;
+        }
+
+        public bool DefineFunction(AstFunctionDecl function)
+        {
+            FunctionList functionList = null;
+            if (mSymbolTable.TryGetValue(function.Name.Name, out var symbol))
+            {
+                if (symbol is FunctionList f)
+                    functionList = f;
+                else
+                    return false;
+            }
+            else
+            {
+                functionList = new FunctionList
+                {
+                    Name = function.Name
+                };
+                mSymbolTable[function.Name.Name] = functionList;
+            }
+
+            functionList.Functions.Add(function);
+            return true;
+        }
+
+        public bool DefineTypeSymbol(string name, CheezType symbol)
+        {
+            if (mSymbolTable.ContainsKey(name))
+                return false;
+
+            mSymbolTable[name] = new CompTimeVariable(name, CheezType.Type, symbol);
+            return true;
+        }
+
+        public ISymbol GetSymbol(string name, bool forceAnalyzed = true)
+        {
+            if (mSymbolTable.ContainsKey(name))
+            {
+                var v = mSymbolTable[name];
+                if (forceAnalyzed && v is CompTimeVariable c && c.Value is Analizable a)
+                {
+                    if (a.Analyzed)
+                        return v;
+                }
+                else
+                {
+                    return v;
+                }
+            }
+            return Parent?.GetSymbol(name);
+        }
+
+        public bool DefineImplFunction(AstFunctionDecl f)
+        {
+            if (!mImplTable.TryGetValue(f.ImplBlock, out var list))
+            {
+                list = new List<AstFunctionDecl>();
+                mImplTable[f.ImplBlock] = list;
+            }
+
+            if (list.Any(ff => ff.Name == f.Name))
+                return false;
+
+            list.Add(f);
+
+            return true;
+        }
+
+        public AstFunctionDecl GetImplFunction(CheezType targetType, string name)
+        {
+            var impls = mImplTable.Where(kv =>
+            {
+                var implType = kv.Key.TargetType;
+                if (TypesMatch(implType, targetType))
+                    return true;
+                return false;
+            });
+
+            var candidates = new List<AstFunctionDecl>();
+
+            foreach (var impl in impls)
+            {
+                var list = impl.Value;
+
+                var c = list?.FirstOrDefault(f => f.Name.Name == name);
+                if (c != null)
+                    candidates.Add(c);
+
+            }
+
+            if (candidates.Count == 0)
+                return Parent?.GetImplFunction(targetType, name);
+
+            return candidates[0];
+        }
 
         public List<IOperator> GetOperators(string name, CheezType lhs, CheezType rhs)
         {
@@ -148,27 +223,6 @@ namespace Cheez.Compiler
                 {
                     result.Add(op);
                 }
-                //if (CheckType(op.LhsType, lhs) && CheckType(op.RhsType, rhs))
-                //{
-                //    if (level < 2)
-                //        result.Clear();
-                //    result.Add(op);
-                //    level = 2;
-                //}
-                //else if (level < 2 && CheckType(op.LhsType, lhs))
-                //{
-                //    if (level < 1)
-                //        result.Clear();
-                //    result.Add(op);
-                //    level = 1;
-                //}
-                //else if (level < 2 && CheckType(op.RhsType, rhs))
-                //{
-                //    if (level < 1)
-                //        result.Clear();
-                //    result.Add(op);
-                //    level = 1;
-                //}
             }
 
             Parent?.GetOperator(name, lhs, rhs, result, ref level);
@@ -201,20 +255,6 @@ namespace Cheez.Compiler
                     result.Add(op);
                     level = 2;
                 }
-                //else if (level < 2 && CheckType(op.LhsType, lhs))
-                //{
-                //    if (level < 1)
-                //        result.Clear();
-                //    result.Add(op);
-                //    level = 1;
-                //}
-                //else if (level < 2 && CheckType(op.RhsType, rhs))
-                //{
-                //    if (level < 1)
-                //        result.Clear();
-                //    result.Add(op);
-                //    level = 1;
-                //}
             }
 
             Parent?.GetOperator(name, sub, result, ref level);
@@ -450,58 +490,6 @@ namespace Cheez.Compiler
             return false;
         }
 
-        public bool DefineSymbol(ISymbol symbol)
-        {
-            if (mSymbolTable.ContainsKey(symbol.Name.Name))
-                return false;
-
-            mSymbolTable[symbol.Name.Name] = symbol;
-            return true;
-        }
-
-        public bool DefineTypeSymbol(string name, CheezType symbol)
-        {
-            if (mSymbolTable.ContainsKey(name))
-                return false;
-
-            mSymbolTable[name] = new CompTimeVariable(name, CheezType.Type, symbol);
-            return true;
-        }
-
-        public ISymbol GetSymbol(string name, bool forceAnalyzed = true)
-        {
-            if (mSymbolTable.ContainsKey(name))
-            {
-                var v = mSymbolTable[name];
-                if (forceAnalyzed && v is CompTimeVariable c && c.Value is Analizable a)
-                {
-                    if (a.Analyzed)
-                        return v;
-                }
-                else
-                {
-                    return v;
-                }
-            }
-            return Parent?.GetSymbol(name);
-        }
-
-        public bool DefineImplFunction(AstFunctionDecl f)
-        {
-            if (!mImplTable.TryGetValue(f.ImplBlock, out var list))
-            {
-                list = new List<AstFunctionDecl>();
-                mImplTable[f.ImplBlock] = list;
-            }
-
-            if (list.Any(ff => ff.Name == f.Name))
-                return false;
-
-            list.Add(f);
-
-            return true;
-        }
-
         private bool TypesMatch(CheezType a, CheezType b)
         {
             if (a == b)
@@ -526,34 +514,6 @@ namespace Cheez.Compiler
             }
 
             return false;
-        }
-
-        public AstFunctionDecl GetImplFunction(CheezType targetType, string name)
-        {
-            var impls = mImplTable.Where(kv =>
-            {
-                var implType = kv.Key.TargetType;
-                if (TypesMatch(implType, targetType))
-                    return true;
-                return false;
-            });
-
-            var candidates = new List<AstFunctionDecl>();
-
-            foreach (var impl in impls)
-            {
-                var list = impl.Value;
-                
-                var c = list?.FirstOrDefault(f => f.Name.Name == name);
-                if (c != null)
-                    candidates.Add(c);
-
-            }
-
-            if (candidates.Count == 0)
-                return Parent?.GetImplFunction(targetType, name);
-
-            return candidates[0];
         }
 
         public override string ToString()

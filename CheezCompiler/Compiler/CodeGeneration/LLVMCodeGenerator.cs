@@ -897,6 +897,25 @@ namespace Cheez.Compiler.CodeGeneration
             //}
         }
 
+        private string GetDecoratedTypeName(CheezType type)
+        {
+            switch (type)
+            {
+                default:
+                    return type.ToString();
+            }
+        }
+
+        private string GetDecoratedFunctionName(AstFunctionDecl f)
+        {
+            var name = f.Name.Name;
+            if (f.Parameters.Count > 0)
+                name += "." + string.Join(".", f.Parameters.Select(p => GetDecoratedTypeName(p.Type)));
+            //if (f.PolymorphicTypes != null)
+            //    name += "+" + string.Join(".", f.PolymorphicTypes.Select(p => $"{p.Key}.{p.Value}"));
+            return name;
+        }
+
         private void GenerateFunctionHeader(AstFunctionDecl function)
         {
             var varargs = function.GetDirective("varargs");
@@ -905,12 +924,7 @@ namespace Cheez.Compiler.CodeGeneration
                 (function.Type as FunctionType).VarArgs = true;
             }
 
-            var name = function.Name.Name;
-            if (function.IsPolyInstance)
-            {
-                name += ".";
-                name += string.Join(".", function.PolymorphicTypes.Select(p => $"{p.Key}.{p.Value}"));
-            }
+            var name = GetDecoratedFunctionName(function);
 
             var ltype = CheezTypeToLLVMType(function.Type, false);
             var lfunc = LLVM.AddFunction(module, name, ltype);

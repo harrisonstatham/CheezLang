@@ -14,7 +14,8 @@ namespace Cheez.Compiler
         public static CheezType Bool => BoolType.Instance;
         public static CheezType Error => ErrorType.Instance;
         public static CheezType Type => CheezTypeType.Instance;
-        public static CheezType Any => AnyType.Intance;
+        public static CheezType Any => AnyType.Instance;
+        public static CheezType FunctionList => FunctionListType.Instance;
 
         public abstract bool IsPolyType { get; }
         public int Size { get; set; } = 0;
@@ -31,6 +32,12 @@ namespace Cheez.Compiler
         {
             return "type";
         }
+    }
+
+    public class FunctionListType : CheezType
+    {
+        public static FunctionListType Instance { get; } = new FunctionListType();
+        public override bool IsPolyType => false;
     }
 
     public class GenericFunctionType : CheezType
@@ -97,7 +104,7 @@ namespace Cheez.Compiler
 
     public class AnyType : CheezType
     {
-        public static AnyType Intance { get; } = new AnyType { Size = 8, Alignment = 8 };
+        public static AnyType Instance { get; } = new AnyType { Size = 8, Alignment = 8 };
 
         public override string ToString()
         {

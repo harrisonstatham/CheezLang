@@ -436,7 +436,7 @@ namespace Cheez.Compiler.Ast
 
         public override string ToString()
         {
-            return "bool-lit";
+            return BoolValue.ToString();
         }
     }
 
