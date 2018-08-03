@@ -16,7 +16,6 @@ math.che,70
 counting_allocator.che,52
 memory.che,31
 main.che,29
-test.che,28
 util.che,25
 stdio.che,24
 windows.che,21
@@ -25,5 +24,6 @@ glew.che,15
 file.che,15
 allocator.che,5
 opengl.che,4
+test.che,2
 bmp.che,2
-Total,3436
+Total,3410
