@@ -54,8 +54,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src\ConsoleErrorHandler.cs" />
-    <Compile Include="src\Main.cs" />
+    <Compile Include="CLI\ConsoleErrorHandler.cs" />
+    <Compile Include="CLI\Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
