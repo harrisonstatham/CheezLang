@@ -24,7 +24,7 @@ namespace Cheez.Compiler.Visitor
 
             var body = function.Body?.Accept(this, 0) ?? ";";
 
-            var pars = string.Join(", ", function.Parameters.Select(p => $"{p.Name}: {p.TypeExpr.Accept(this, 0)}"));
+            var pars = string.Join(", ", function.Parameters.Select(p => $"{p.Name}: {p.Type}"));
             var head = $"fn {function.Name}";
 
             //if (function.IsGeneric)
@@ -36,7 +36,7 @@ namespace Cheez.Compiler.Visitor
 
             if (function.ReturnTypeExpr != null)
             {
-                head += $" -> {function.ReturnTypeExpr.Accept(this, 0)}";
+                head += $" -> {function.ReturnType}";
             }
 
             sb.AppendLine($"{head} {body}".Indent(indentLevel));
@@ -80,31 +80,47 @@ namespace Cheez.Compiler.Visitor
 
         public override string VisitTypeAlias(AstTypeAliasDecl al, int data = 0)
         {
-            return $"type {al.Name.Name} = {al.TypeExpr.Accept(this, 0)}";
+            return $"type {al.Name.Name} = {al.Type}";
         }
 
         public override string VisitUsingStatement(AstUsingStmt use, int data = 0)
         {
-            return $"using {use.Value.Accept(this, 0)}";
+            return $"use {use.Value.Accept(this, 0)}";
         }
 
         public override string VisitStructDeclaration(AstStructDecl str, int data = 0)
         {
-            var body = string.Join("\n", str.Members.Select(m => $"{m.Name}: {m.TypeExpr.Accept(this, 0)}"));
+            var body = ""; 
             var head = $"struct {str.Name}";
+
+            if (str.IsPolymorphic)
+            {
+                head += "(" + string.Join(", ", str.Parameters.Select(p => $"{p.Name}: {p.Type}")) + ")";
+                body = string.Join("\n", str.Members.Select(m => $"{m.Name}: {m.TypeExpr}"));
+            }
+            else if (str.IsPolyInstance)
+            {
+                head += "(" + string.Join(", ", str.Parameters.Select(p => $"{p.Value}")) + ")";
+                body = string.Join("\n", str.Members.Select(m => $"{m.Name}: {m.Type}"));
+            }
+            else
+            {
+                body = string.Join("\n", str.Members.Select(m => $"{m.Name}: {m.Type}"));
+            }
 
             var sb = new StringBuilder();
             sb.AppendLine($"{head} {{\n{body.Indent(4)}\n}}");
 
             if (str.PolymorphicInstances?.Count > 0)
             {
-                sb.AppendLine($"// Polymorphic instances for {head}");
+                sb.AppendLine($"/* Polymorphic instances for {head}");
                 foreach (var pi in str.PolymorphicInstances)
                 {
                     var args = string.Join(", ", pi.Parameters.Select(p => $"{p.Name.Name} = {p.Value}"));
                     sb.AppendLine($"// {args}".Indent(4));
                     sb.AppendLine(pi.Accept(this, 0).Indent(4));
                 }
+                sb.AppendLine("*/");
             }
 
             return sb.ToString();
@@ -131,7 +147,7 @@ namespace Cheez.Compiler.Visitor
 
             var header = "impl ";
 
-            if (impl.Trait != null)
+            if (impl.TraitExpr != null)
             {
                 header += impl.Trait + " for ";
             }
@@ -145,8 +161,7 @@ namespace Cheez.Compiler.Visitor
         {
             StringBuilder sb = new StringBuilder();
             sb.Append("let ").Append(variable.Name);
-            if (variable.TypeExpr != null)
-                sb.Append($": {variable.TypeExpr.Accept(this, 0)}");
+            sb.Append($": {variable.Type}");
             if (variable.Initializer != null)
                 sb.Append($" = {variable.Initializer.Accept(this, indentLevel)}");
             return sb.ToString();

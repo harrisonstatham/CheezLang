@@ -1,4 +1,7 @@
-﻿using Cheez.Compiler.Parsing;
+﻿using Cheez.Compiler.Ast;
+using Cheez.Compiler.Parsing;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Cheez.Compiler.ParseTree
 {
@@ -25,6 +28,18 @@ namespace Cheez.Compiler.ParseTree
         {
             this.Beginning = beg;
             this.End = end;
+        }
+        
+        public Location(IEnumerable<ILocation> locations)
+        {
+            this.Beginning = locations.First().Beginning;
+            this.End = locations.Last().End;
+        }
+
+        public Location(IEnumerable<IAstNode> locations)
+        {
+            this.Beginning = locations.First().Location.Beginning;
+            this.End = locations.Last().Location.End;
         }
     }
 }

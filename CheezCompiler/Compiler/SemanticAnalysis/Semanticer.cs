@@ -247,7 +247,8 @@ namespace Cheez.Compiler.SemanticAnalysis
             this.workspace = workspace;
 
             // struct declarations
-            if (false) {
+            if (false)
+            {
                 var structs = new List<AstStructDecl>();
                 var ens = new List<AstEnumDecl>();
                 var traits = new List<AstTraitDeclaration>();
@@ -331,6 +332,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                                     break;
 
                                 case IError err:
+                                    errorHandler.ReportError("TOOOOOOOOOODOOOOOOOOOOOOOOOOOOO");
                                     errors.Add(err);
                                     break;
 
@@ -605,7 +607,7 @@ namespace Cheez.Compiler.SemanticAnalysis
             yield break;
         }
 
-        private IEnumerable<object> CallPolyStruct(AstCallExpr call, GenericStructType @struct, SemanticerData context)
+        private IEnumerable<object> CallPolyStruct(AstCallExpr call, PolyStructType @struct, SemanticerData context)
         {
             var types = new Dictionary<string, CheezType>();
 
@@ -721,7 +723,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                 if (!ok)
                     yield break;
 
-                str.Type = new GenericStructType(str);
+                str.Type = new PolyStructType(str);
                 if (!scope.DefineSymbol(str))
                 {
                     data.ReportError(str.Name.GenericParseTreeNode, $"A symbol with name '{str.Name.Name}' already exists in current scope");
@@ -857,7 +859,7 @@ namespace Cheez.Compiler.SemanticAnalysis
             // if this function is polymorphic, but not a polymorphic instance
             if (!function.IsPolyInstance && ((function.ReturnTypeExpr?.IsPolymorphic ?? false) || function.Parameters.Any(p => p.TypeExpr.IsPolymorphic)))
             {
-                function.IsGeneric = true;
+                function.IsPorymorphic = true;
                 function.Type = new GenericFunctionType(function);
 
                 // collect polymorphic types
@@ -1004,7 +1006,7 @@ namespace Cheez.Compiler.SemanticAnalysis
             foreach (var v in VisitFunctionHeader(function, context))
                 yield return v;
 
-            if (!function.IsGeneric && function.Body != null)
+            if (!function.IsPorymorphic && function.Body != null)
             {
                 foreach (var v in VisitFunctionBody(function, context))
                     yield return v;
@@ -2556,7 +2558,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                         for (int i = 0; i < @struct.Parameters.Count; i++)
                         {
                             var p = call.Arguments[i];
-                            var a = @struct.Parameters[i].Value as CheezType;
+                            var a = @struct.Parameters[i].Value.value as CheezType;
 
                             if (InferGenericParameterType(result, p, ref a))
                                 changes = true;
@@ -2591,8 +2593,11 @@ namespace Cheez.Compiler.SemanticAnalysis
             var parameterTypeExprs = g.Declaration.Parameters.Select(p => p.TypeExpr.Clone()).ToArray();
             var returnTypeExpr = g.Declaration.ReturnTypeExpr?.Clone();
 
-            //foreach (var v in returnTypeExpr.Accept(this, context))
-            //    yield return v;
+            if (returnTypeExpr != null)
+            {
+                //foreach (var v in returnTypeExpr.Accept(this, context))
+                    //yield return v;
+            }
 
             // try to infer type from expected type before checking arguments
             if (context.ExpectedType != null && returnTypeExpr != null)
@@ -2695,7 +2700,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                 // instantiate function
                 instance = g.Declaration.Clone() as AstFunctionDecl;
                 g.Declaration.PolymorphicInstances.Add(instance);
-                instance.IsGeneric = false;
+                instance.IsPorymorphic = false;
                 instance.IsPolyInstance = true;
                 instance.PolymorphicTypes = types;
                 //g.Declaration.AddPolyInstance(types, instance);
@@ -2796,7 +2801,7 @@ namespace Cheez.Compiler.SemanticAnalysis
         {
             List<AstFunctionDecl> candidates = new List<AstFunctionDecl>();
             Console.WriteLine($"{functions.Count} candidates for call {call}: \n  {string.Join("\n  ", functions)}");
-            
+
             foreach (var cand in functions)
             {
                 if (cand.Parameters.Count == call.Arguments.Count)
@@ -2809,7 +2814,7 @@ namespace Cheez.Compiler.SemanticAnalysis
             foreach (var cand in candidates)
             {
                 var args = call.Arguments.Select(a => a.Clone()).ToList();
-                
+
                 var types = new Dictionary<string, CheezType>();
 
                 var eh = new SilentErrorHandler();
@@ -2823,7 +2828,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                     foreach (var v in MatchExpressionToType(arg, param.Type, context.Clone(ErrorHandler: eh)))
                         yield return v;
                 }
-                
+
                 if (!eh.HasErrors)
                 {
                     candidatesMatchingTypes.Add((cand, args));
@@ -2875,7 +2880,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                 foreach (var v in CallPolyFunction(call, g, context))
                     yield return v;
             }
-            else if (call.Function.Type is GenericStructType genStruct)
+            else if (call.Function.Type is PolyStructType genStruct)
             {
                 foreach (var v in CallPolyStruct(call, genStruct, context))
                     yield return v;
@@ -2904,13 +2909,25 @@ namespace Cheez.Compiler.SemanticAnalysis
             else if (call.Function.Type == CheezType.FunctionList)
             {
                 var flist = call.Function.Value as FunctionList;
-                foreach (var v in MatchCallToFunctions(call, flist.Functions, context))
-                    yield return v;
+                if (flist.Functions.Count == 0)
+                {
+                    context.ReportError(call.Function.GenericParseTreeNode, "No function matches call");
+                    yield break;
+                }
+                if (flist.Functions.Count > 1)
+                {
+                    context.ReportError(call.Function.GenericParseTreeNode, "More than one function matches call");
+                    yield break;
+                }
+                var fff = flist.Functions[0];
+                call.Function = new AstFunctionExpression(call.Function.GenericParseTreeNode, fff, call.Function);
+
+                //foreach (var v in MatchCallToFunctions(call, flist.Functions, context))
+                //    yield return v;
             }
 
             if (call.Function.Type is FunctionType f)
             {
-
                 if (f.ParameterTypes.Length != call.Arguments.Count)
                 {
                     context.ReportError(call.GenericParseTreeNode, $"Wrong number of arguments in function call. Expected {f.ParameterTypes.Length}, got {call.Arguments.Count}");
@@ -2921,6 +2938,20 @@ namespace Cheez.Compiler.SemanticAnalysis
                 for (int i = 0; i < call.Arguments.Count && i < f.ParameterTypes.Length; i++)
                 {
                     var expectedType = f.ParameterTypes[i];
+
+                    {
+                        var a = call.Arguments[i];
+                        if (a.Type != null)
+                            continue;
+                        foreach (var v in a.Accept(this, context.Clone(ExpectedType: expectedType)))
+                        {
+                            if (v is ReplaceAstExpr r)
+                                call.Arguments[i] = r.NewExpression;
+                            else
+                                yield return v;
+                        }
+                    }
+
                     if (!CanAssign(call.Arguments[i].Type, expectedType, out var t, context, call.Arguments[i].GenericParseTreeNode))
                     {
                         context.ReportError(context.Text, call.Arguments[i].GenericParseTreeNode, $"Argument type does not match parameter type. Expected {expectedType}, got {call.Arguments[i].Type}");
@@ -2936,7 +2967,7 @@ namespace Cheez.Compiler.SemanticAnalysis
             }
             else if (call.Function.Type != CheezType.Error)
             {
-                context.ReportError(call.Function.GenericParseTreeNode, $"Type '{call.Function.Type}' is not a callable type");
+                //context.ReportError(call.Function.GenericParseTreeNode, $"Type '{call.Function.Type}' is not a callable type");
             }
 
             yield break;
@@ -3726,7 +3757,7 @@ namespace Cheez.Compiler.SemanticAnalysis
                             }
                         }
 
-                        if (fType is GenericStructType s)
+                        if (fType is PolyStructType s)
                         {
                             if (s.Declaration.Parameters.Count != aTypes.Length)
                             {

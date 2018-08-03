@@ -198,7 +198,7 @@ namespace CheezCLI
                 Directory.CreateDirectory(options.OutPath);
             string filePath = Path.Combine(options.OutPath, options.OutName);
 
-            ICodeGenerator generator = new LLVMCodeGenerator();
+            ICodeGenerator generator = new LLVMCodeGeneratorNew();
             bool success = generator.GenerateCode(workspace, filePath);
             if (!success)
                 return false;

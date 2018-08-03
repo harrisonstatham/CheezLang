@@ -11,11 +11,12 @@ namespace Cheez.Compiler.Ast
         IsLValue = 0
     }
 
-    public abstract class AstExpression : IVisitorAcceptor
+    public abstract class AstExpression : IVisitorAcceptor, IAstNode
     {
         //public int Id { get; }
 
         public ParseTree.PTExpr GenericParseTreeNode { get; set; }
+        public ParseTree.ILocation Location => GenericParseTreeNode;
 
         public CheezType Type { get; set; }
         public object Value { get; set; }

@@ -12,11 +12,12 @@ namespace Cheez.Compiler.Ast
         IsLastStatementInBlock
     }
 
-    public abstract class AstStatement : IVisitorAcceptor
+    public abstract class AstStatement : IVisitorAcceptor, IAstNode
     {
         protected int mFlags = 0;
 
         public ParseTree.PTStatement GenericParseTreeNode { get; set; }
+        public ParseTree.ILocation Location => GenericParseTreeNode;
 
         public Scope Scope { get; set; }
         public Dictionary<string, AstDirective> Directives { get; protected set; }
@@ -53,6 +54,17 @@ namespace Cheez.Compiler.Ast
         public bool HasDirective(string name)
         {
             return Directives.ContainsKey(name);
+        }
+
+        public bool GetDirective(string name, out AstDirective dir)
+        {
+            if (!Directives.ContainsKey(name))
+            {
+                dir = null;
+                return false;
+            }
+            dir = Directives[name];
+            return true;
         }
 
         public AstDirective GetDirective(string name)

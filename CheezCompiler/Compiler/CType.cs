@@ -1,11 +1,54 @@
 ﻿using Cheez.Compiler.Ast;
-using Cheez.Compiler.ParseTree;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Cheez.Compiler
 {
+    public class CheezValue
+    {
+        public CheezType type;
+        public object value;
+
+        public CheezValue(CheezType t, object v)
+        {
+            type = t;
+            value = v;
+        }
+
+        public override string ToString()
+        {
+            return value?.ToString() ?? "null";
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is CheezValue v)
+            {
+                if (type != v.type)
+                    return false;
+
+                return value?.Equals(v.value) ?? false;
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return type.GetHashCode() + (value?.GetHashCode() ?? 0);
+        }
+
+        public static bool operator ==(CheezValue a, CheezValue b)
+        {
+            return a?.Equals(b) ?? false;
+        }
+
+        public static bool operator !=(CheezValue a, CheezValue b)
+        {
+            return !(a == b);
+        }
+    }
+
     public abstract class CheezType
     {
         public static CheezType Void => VoidType.Intance;
@@ -20,6 +63,11 @@ namespace Cheez.Compiler
         public abstract bool IsPolyType { get; }
         public int Size { get; set; } = 0;
         public int Alignment { get; set; } = 1;
+
+        public static implicit operator CheezValue(CheezType t)
+        {
+            return new CheezValue(CheezType.Type, t);
+        }
     }
 
     public class CheezTypeType : CheezType
@@ -54,15 +102,20 @@ namespace Cheez.Compiler
         }
     }
 
-    public class GenericStructType : CheezType
+    public class PolyStructType : CheezType
     {
         public AstStructDecl Declaration { get; }
 
-        public override bool IsPolyType => false;
+        public override bool IsPolyType => true;
 
-        public GenericStructType(AstStructDecl decl)
+        public PolyStructType(AstStructDecl decl)
         {
             Declaration = decl;
+        }
+
+        public override string ToString()
+        {
+            return $"{Declaration.ToString()}";
         }
     }
 
@@ -86,7 +139,7 @@ namespace Cheez.Compiler
 
         public override string ToString()
         {
-            return "<Error Type>";
+            return "@ErrorType()";
         }
     }
 
@@ -266,7 +319,7 @@ namespace Cheez.Compiler
 
         public override string ToString()
         {
-            return $"ref({TargetType})";
+            return $"@ref({TargetType})";
         }
 
         public override bool IsPolyType => TargetType.IsPolyType;
@@ -434,7 +487,7 @@ namespace Cheez.Compiler
         public StructType(AstStructDecl decl)
         {
             Declaration = decl;
-            Arguments = decl.Parameters.Select(p => p.Value as CheezType).ToArray();
+            Arguments = decl.Parameters.Select(p => p.Value?.value as CheezType).ToArray();
         }
         
         public StructType(AstStructDecl decl, CheezType[] args)
@@ -461,7 +514,13 @@ namespace Cheez.Compiler
 
         public override string ToString()
         {
-            return Declaration.ToString();
+            var name = Declaration.Name.Name;
+            if (Declaration.IsPolyInstance)
+            {
+                name += $"({string.Join(", ", Declaration.Parameters.Select(p => p.Value))})";
+            }
+
+            return name;
         }
 
         public int GetIndexOfMember(string right)

@@ -6,19 +6,20 @@ using System.Text;
 
 namespace Cheez.Compiler.Ast
 {
-    public class AstParameter : ITypedSymbol
+    public class AstParameter : ITypedSymbol, IAstNode
     {
         public ParseTree.PTParameter ParseTreeNode { get; }
+        public ParseTree.ILocation Location => ParseTreeNode;
 
         public AstIdentifierExpr Name { get; }
         public CheezType Type { get; set; }
         public AstExpression TypeExpr { get; set; }
         public Scope Scope { get; set; }
 
-        public object Value { get; set; }
+        public CheezValue Value { get; set; }
 
         public bool IsConstant => true;
-
+        
         public AstParameter(ParseTree.PTParameter node, AstIdentifierExpr name, AstExpression typeExpr)
         {
             ParseTreeNode = node;
@@ -43,9 +44,10 @@ namespace Cheez.Compiler.Ast
 
     #region Function Declaration
 
-    public class AstFunctionParameter : ITypedSymbol
+    public class AstFunctionParameter : ITypedSymbol, IAstNode
     {
         public ParseTree.PTFunctionParam ParseTreeNode { get; }
+        public ParseTree.ILocation Location => ParseTreeNode;
 
         public AstIdentifierExpr Name { get; }
         public CheezType Type { get; set; }
@@ -53,6 +55,7 @@ namespace Cheez.Compiler.Ast
         public Scope Scope { get; set; }
 
         public bool IsConstant => false;
+
 
         public AstFunctionParameter(ParseTree.PTFunctionParam node, AstIdentifierExpr name, AstExpression typeExpr)
         {
@@ -112,7 +115,7 @@ namespace Cheez.Compiler.Ast
         public List<AstFunctionDecl> PolymorphicInstances { get; } = new List<AstFunctionDecl>();
 
         public bool RefSelf { get; set; }
-        public bool IsGeneric { get; set; }
+        public bool IsPorymorphic { get; set; }
 
         public bool IsConstant => true;
 
@@ -256,7 +259,7 @@ namespace Cheez.Compiler.Ast
             var str = Name.Name;
             if (Parameters?.Count > 0)
             {
-                str += $"({string.Join(", ", Parameters.Select(p => $"{p.Type}"))})";
+                str += $"({string.Join(", ", Parameters.Select(p => $"{p.Name}: {p.Type}"))})";
             }
             return str;
         }
@@ -303,7 +306,7 @@ namespace Cheez.Compiler.Ast
 
         public override string ToString()
         {
-            return $"trait {Name.Name}";
+            return $"/*trait*/ {Name.Name}";
         }
     }
 
@@ -435,6 +438,8 @@ namespace Cheez.Compiler.Ast
 
         public AstIdentifierExpr Name { get; }
         public List<AstEnumMember> Members { get; }
+
+        public CheezType Type { get; set; }
 
         public AstEnumDecl(ParseTree.PTStatement node, AstIdentifierExpr name, List<AstEnumMember> members, Dictionary<string, AstDirective> dirs) : base(node, dirs)
         {

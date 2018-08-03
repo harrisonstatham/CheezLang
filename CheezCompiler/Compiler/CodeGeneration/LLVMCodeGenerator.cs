@@ -331,8 +331,7 @@ namespace Cheez.Compiler.CodeGeneration
                 LLVM.InitializeX86AsmParser();
                 LLVM.InitializeX86AsmPrinter();
 
-                LLVMTargetRef target = default;
-                if (LLVM.GetTargetFromTriple(targetTriple, out target, out var llvmTargetError))
+                if (LLVM.GetTargetFromTriple(targetTriple, out LLVMTargetRef target, out var llvmTargetError))
                 {
                     System.Console.Error.WriteLine(llvmTargetError);
                     return false;
@@ -650,7 +649,7 @@ namespace Cheez.Compiler.CodeGeneration
                 {
                     foreach (var func in trait.Functions)
                     {
-                        if (func.IsGeneric)
+                        if (func.IsPorymorphic)
                         {
                             throw new NotImplementedException();
                         }

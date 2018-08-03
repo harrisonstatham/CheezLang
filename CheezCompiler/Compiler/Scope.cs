@@ -51,6 +51,13 @@ namespace Cheez.Compiler
             this.Type = type;
             this.Value = value;
         }
+
+        public CompTimeVariable(string name, CheezValue val)
+        {
+            this.Name = new AstIdentifierExpr(null, name, false);
+            this.Type = val.type;
+            this.Value = val.value;
+        }
     }
 
     public class FunctionList : ISymbol

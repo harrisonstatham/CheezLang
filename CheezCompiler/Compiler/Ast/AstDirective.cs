@@ -2,9 +2,10 @@
 
 namespace Cheez.Compiler.Ast
 {
-    public class AstDirective
+    public class AstDirective : IAstNode
     {
         public ParseTree.PTDirective ParseTreeNode { get; }
+        public ParseTree.ILocation Location => ParseTreeNode;
 
         public string Name { get; }
 

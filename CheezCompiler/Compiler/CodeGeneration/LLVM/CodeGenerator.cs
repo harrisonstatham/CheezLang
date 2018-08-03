@@ -87,7 +87,7 @@ namespace Cheez.Compiler.CodeGeneration.LLVMCodeGen
             }
             catch (Exception e)
             {
-                workspace.ReportError(e.Message);
+                workspace.ReportError(e.Message + "\n" + e.StackTrace);
                 return false;
             }
         }
