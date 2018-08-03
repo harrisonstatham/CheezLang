@@ -72,19 +72,29 @@ namespace CheezCLI
 
             // line containing error (may be multiple lines)
             {
-                if (!multiLine)
+                var firstLine = beginning.line;
+                var lastLine = end.line;
+                var ls = lineStart; // lineStart
+                var le = GetLineEndIndex(error.Text, index); // lineEnd
+                var ei = Math.Min(le, end.end); // endIndex
+                var i = index;
+
+                for (var line = firstLine; line <= lastLine; ++line)
                 {
-                    var part1 = error.Text.Text.Substring(lineStart, index - lineStart);
-                    var part2 = error.Text.Text.Substring(index, end.end - index);
-                    var part3 = error.Text.Text.Substring(end.end, lineEnd - end.end);
-                    LogInline(string.Format($"{{0,{lineNumberWidth}}}> ", lineNumber), ConsoleColor.White);
+                    var part1 = error.Text.Text.Substring(ls, i - ls);
+                    var part2 = error.Text.Text.Substring(i, ei - i);
+                    var part3 = error.Text.Text.Substring(ei, le - ei);
+
+                    LogInline(string.Format($"{{0,{lineNumberWidth}}}> ", line), ConsoleColor.White);
+
                     LogInline(part1, ConsoleColor.White, errorLineBackgroundColor);
                     LogInline(part2, ConsoleColor.Red, errorLineBackgroundColor);
                     Log(part3, ConsoleColor.White, errorLineBackgroundColor);
-                }
-                else
-                {
-                    Log(error.Text.Text.Substring(lineStart, GetLineEndIndex(error.Text, end.index) - lineStart), ConsoleColor.White);
+
+                    ls = le + 1;
+                    i = ls;
+                    le = GetLineEndIndex(error.Text, i);
+                    ei = Math.Min(le, end.end);
                 }
             }
 
