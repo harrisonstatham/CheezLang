@@ -22,7 +22,7 @@ namespace Cheez.Compiler.Visitor
         ReturnType VisitImplBlock(AstImplBlock impl, DataType data = default);
         ReturnType VisitReturnStatement(AstReturnStmt ret, DataType data = default);
         ReturnType VisitUsingStatement(AstUsingStmt use, DataType data = default);
-        ReturnType VisitTypeAlias(AstTypeAliasDecl al, DataType data = default);
+        ReturnType VisitTypeAlias(AstTypeDecl al, DataType data = default);
         ReturnType VisitDeferStatement(AstDeferStmt def, DataType data = default);
         ReturnType VisitMatchStatement(AstMatchStmt match, DataType data = default);
         ReturnType VisitBreakStatement(AstBreakStmt br, DataType data = default);
@@ -107,7 +107,7 @@ namespace Cheez.Compiler.Visitor
 
         public virtual ReturnType VisitStructValueExpression(AstStructValueExpr str, DataType data = default) => default;
 
-        public virtual ReturnType VisitTypeAlias(AstTypeAliasDecl al, DataType data = default) => default;
+        public virtual ReturnType VisitTypeAlias(AstTypeDecl al, DataType data = default) => default;
 
         public virtual ReturnType VisitStructDeclaration(AstStructDecl type, DataType data = default) => default;
 

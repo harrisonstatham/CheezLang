@@ -40,7 +40,7 @@ namespace Cheez.Compiler.CodeGeneration.LLVMCodeGen
 
         public bool GenerateCode(Workspace workspace, string targetFile)
         {
-            try
+            //try
             {
                 this.workspace = workspace;
                 this.targetFile = targetFile;
@@ -85,11 +85,11 @@ namespace Cheez.Compiler.CodeGeneration.LLVMCodeGen
 
                 return true;
             }
-            catch (Exception e)
-            {
-                workspace.ReportError(e.Message + "\n" + e.StackTrace);
-                return false;
-            }
+            //catch (Exception e)
+            //{
+            //    workspace.ReportError(e.Message + "\n" + e.StackTrace);
+            //    return false;
+            //}
         }
 
         public bool CompileCode(IEnumerable<string> libraryIncludeDirectories, IEnumerable<string> libraries, string subsystem, IErrorHandler errorHandler)

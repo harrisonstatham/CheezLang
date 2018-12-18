@@ -6,8 +6,6 @@ let isize = int
 
 fn sprintf(buff: char&, f: string, a: double) -> int #varargs;
 
-let NEW_LINE: char = '`n'
-
 fn PrintString(s: $T) {
     let s = (string)s
     let len = strlen(s)
@@ -153,7 +151,7 @@ fn Bprinti(buffer: String&, val: $T) {
 
 fn Println(v: $T) {
     Print(v)
-    PrintChar(NEW_LINE)
+    PrintChar('`n')
 }
 
 fn Print(v: $T) {

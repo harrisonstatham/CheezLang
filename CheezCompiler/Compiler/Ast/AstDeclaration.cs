@@ -1,4 +1,5 @@
 ﻿using Cheez.Compiler.Visitor;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace Cheez.Compiler.Ast
         public CheezValue Value { get; set; }
 
         public bool IsConstant => true;
-        
+
         public AstParameter(ParseTree.PTParameter node, AstIdentifierExpr name, AstExpression typeExpr)
         {
             ParseTreeNode = node;
@@ -132,8 +133,8 @@ namespace Cheez.Compiler.Ast
             List<AstIdentifierExpr> generics,
             List<AstFunctionParameter> parameters,
             AstExpression returnTypeExpr,
-            AstBlockStmt body = null, 
-            Dictionary<string, AstDirective> directives = null, 
+            AstBlockStmt body = null,
+            Dictionary<string, AstDirective> directives = null,
             bool refSelf = false)
             : base(node, directives)
         {
@@ -348,7 +349,51 @@ namespace Cheez.Compiler.Ast
 
     #endregion
 
-    #region Variable Declarion
+    #region Variable/Type Declarion
+
+    public class AstTypeDecl : AstStatement
+    {
+        public AstIdentifierExpr Name { get; set; }
+        public AstExpression Initializer { get; set; }
+        public Scope SubScope { get; set; }
+        public CheezType Type { get; set; }
+
+        public bool IsConstant { get; set; } = true;
+
+        public AstTypeDecl(ParseTree.PTStatement node, AstIdentifierExpr name, AstExpression init, Dictionary<string, AstDirective> directives = null) : base(node, directives)
+        {
+            this.Name = name;
+            this.Initializer = init;
+        }
+
+        [DebuggerStepThrough]
+        public override T Accept<T, D>(IVisitor<T, D> visitor, D data = default(D))
+        {
+            return visitor.VisitTypeAlias(this, data);
+        }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.Append($"type {Name}");
+            sb.Append($" = {Initializer}");
+
+            return sb.ToString();
+        }
+
+        public override AstStatement Clone()
+        {
+            return new AstTypeDecl(GenericParseTreeNode,
+                Name.Clone() as AstIdentifierExpr,
+                Initializer?.Clone(),
+                Directives) // @Tode: clone this?
+            {
+                Scope = this.Scope,
+                Directives = this.Directives,
+                mFlags = this.mFlags
+            };
+        }
+    }
 
     public class AstVariableDecl : AstStatement, ITypedSymbol
     {
@@ -455,43 +500,9 @@ namespace Cheez.Compiler.Ast
 
         public override AstStatement Clone()
         {
-            return new AstEnumDecl(ParseTreeNode, 
+            return new AstEnumDecl(ParseTreeNode,
                 Name.Clone() as AstIdentifierExpr,
                 Members.Select(m => m.Clone()).ToList(),
-                Directives) // @Tode: clone this?
-            {
-                Scope = this.Scope,
-                Directives = this.Directives,
-                mFlags = this.mFlags
-            };
-        }
-    }
-
-    #endregion
-
-    #region Type Alias
-
-    public class AstTypeAliasDecl : AstStatement
-    {
-        public AstIdentifierExpr Name { get; set; }
-        public AstExpression TypeExpr { get; set; }
-        public CheezType Type { get; set; }
-
-        public AstTypeAliasDecl(ParseTree.PTStatement node, AstIdentifierExpr name, AstExpression typeExpr, Dictionary<string, AstDirective> dirs = null) : base(node, dirs)
-        {
-            this.Name = name;
-        }
-
-        public override T Accept<T, D>(IVisitor<T, D> visitor, D data = default)
-        {
-            return visitor.VisitTypeAlias(this, data);
-        }
-
-        public override AstStatement Clone()
-        {
-            return new AstTypeAliasDecl(GenericParseTreeNode, 
-                Name.Clone() as AstIdentifierExpr,
-                TypeExpr.Clone(),
                 Directives) // @Tode: clone this?
             {
                 Scope = this.Scope,

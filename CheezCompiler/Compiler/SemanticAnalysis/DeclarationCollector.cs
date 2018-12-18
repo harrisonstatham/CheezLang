@@ -18,6 +18,7 @@ namespace Cheez.Compiler.SemanticAnalysis
         private List<AstTraitDeclaration> mTraits = new List<AstTraitDeclaration>();
         private List<AstEnumDecl> mEnums = new List<AstEnumDecl>();
         private List<AstVariableDecl> mVariables = new List<AstVariableDecl>();
+        private List<AstTypeDecl> mTypeDefs = new List<AstTypeDecl>();
         private List<AstImplBlock> mImpls = new List<AstImplBlock>();
 
         private List<AstFunctionDecl> mFunctions = new List<AstFunctionDecl>();
@@ -27,6 +28,15 @@ namespace Cheez.Compiler.SemanticAnalysis
         [SkipInStackFrame]
         private void ReportError(ILocation lc, string message)
         {
+            var (callingFunctionFile, callingFunctionName, callLineNumber) = Util.GetCallingFunction().GetValueOrDefault(("", "", -1));
+            var file = mWorkspace.GetFile(lc.Beginning.file);
+            mErrorHandler.Peek().ReportError(file, lc, message, null, callingFunctionFile, callingFunctionName, callLineNumber);
+        }
+
+        [SkipInStackFrame]
+        private void ReportError(IAstNode node, string message)
+        {
+            var lc = node.Location;
             var (callingFunctionFile, callingFunctionName, callLineNumber) = Util.GetCallingFunction().GetValueOrDefault(("", "", -1));
             var file = mWorkspace.GetFile(lc.Beginning.file);
             mErrorHandler.Peek().ReportError(file, lc, message, null, callingFunctionFile, callingFunctionName, callLineNumber);
@@ -103,11 +113,22 @@ namespace Cheez.Compiler.SemanticAnalysis
                             mImpls.Add(impl);
                             break;
                         }
+
+                    case AstTypeDecl type:
+                        {
+                            type.Scope = globalScope;
+                            mTypeDefs.Add(type);
+                            break;
+                        }
                 }
             }
 
             // pass 2:
             // typedefs
+            foreach (var t in mTypeDefs)
+            {
+                Pass2TypeAlias(t);
+            }
             
             // pass 3:
             // functions, trait functions
@@ -165,7 +186,8 @@ namespace Cheez.Compiler.SemanticAnalysis
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        #region Pass 1
 
         private void Pass1TraitDeclaration(AstTraitDeclaration trait)
         {
@@ -262,11 +284,23 @@ namespace Cheez.Compiler.SemanticAnalysis
             }
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#endregion
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         #region Pass 2
+
+        private void Pass2TypeAlias(AstTypeDecl t)
+        {
+            t.Initializer.Scope = t.Scope;
+            t.Type = ResolveType(t.Initializer);
+
+            if (!t.Scope.DefineTypeSymbol(t.Name.Name, t.Type))
+            {
+                ReportError(t.Name, $"A type with name '{t.Name.Name}' already exists in this scope.");
+            }
+        }
 
         //private void Pass2StructDeclaration(AstStructDecl @struct)
         //{
@@ -284,18 +318,8 @@ namespace Cheez.Compiler.SemanticAnalysis
         //    }
         //}
 
-        private void Pass6StructMembers(AstStructDecl str)
-        {
-            foreach (var member in str.Members)
-            {
-                member.TypeExpr.Scope = str.SubScope;
-                member.Type = ResolveType(member.TypeExpr);
-            }
-        }
-
         #endregion
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -412,7 +436,6 @@ namespace Cheez.Compiler.SemanticAnalysis
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         #region Pass 4
 
@@ -423,7 +446,6 @@ namespace Cheez.Compiler.SemanticAnalysis
 
         #endregion
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -448,6 +470,21 @@ namespace Cheez.Compiler.SemanticAnalysis
         #endregion
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        #region Pass 6
+
+        private void Pass6StructMembers(AstStructDecl str)
+        {
+            foreach (var member in str.Members)
+            {
+                member.TypeExpr.Scope = str.SubScope;
+                member.Type = ResolveType(member.TypeExpr);
+            }
+        }
+
+        #endregion
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

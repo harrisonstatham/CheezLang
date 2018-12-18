@@ -540,19 +540,6 @@ namespace Cheez.Compiler.SemanticAnalysis
             yield break;
         }
 
-        public override IEnumerable<object> VisitTypeAlias(AstTypeAliasDecl al, SemanticerData data = null)
-        {
-            al.Scope = data.Scope;
-            foreach (var v in al.TypeExpr.Accept(this, data.Clone()))
-                yield return v;
-            if (al.TypeExpr.Value is CheezType t)
-                al.Type = t;
-            else
-            {
-                data.ReportError(al.TypeExpr.GenericParseTreeNode, $"Expected type, got {al.TypeExpr.Type}");
-            }
-        }
-
         public override IEnumerable<object> VisitEmptyExpression(AstEmptyExpr em, SemanticerData data = null)
         {
             em.Scope = data.Scope;

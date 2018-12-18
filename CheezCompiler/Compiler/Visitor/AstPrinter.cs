@@ -78,7 +78,7 @@ namespace Cheez.Compiler.Visitor
             return sb.ToString();
         }
 
-        public override string VisitTypeAlias(AstTypeAliasDecl al, int data = 0)
+        public override string VisitTypeAlias(AstTypeDecl al, int data = 0)
         {
             return $"type {al.Name.Name} = {al.Type}";
         }

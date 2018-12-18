@@ -264,6 +264,8 @@ namespace Cheez.Compiler.Parsing
                         return (false, null);
                     }
 
+                case TokenType.KwType:
+                    return (false, ParseTypeDeclaration());
                 case TokenType.KwReturn:
                     return (false, ParseReturnStatement());
                 case TokenType.KwFn:
@@ -745,6 +747,33 @@ namespace Cheez.Compiler.Parsing
             //if (!Expect(TokenType.NewLine, ErrMsg("\\n", "after expression statement")))
             //    RecoverStatement();
             return new PTExprStmt(expr.Beginning, expr.End, expr);
+        }
+
+        private PTTypeDecl ParseTypeDeclaration(params TokenType[] delimiters)
+        {
+            TokenLocation beg = null, end = null;
+            List<PTDirective> directives = new List<PTDirective>();
+            PTIdentifierExpr name = null;
+            PTExpr init = null;
+
+            beg = Consume(TokenType.KwType, ErrMsg("keyword 'type'", "at beginning of type alias")).location;
+
+            SkipNewlines();
+            while (CheckToken(TokenType.HashIdentifier))
+            {
+                directives.Add(ParseDirective());
+                SkipNewlines();
+            }
+
+            name = ParseIdentifierExpr(ErrMsg("identifier", "after keyword 'type'"));
+            end = name.End;
+
+            Consume(TokenType.Equal, ErrMsg("=", "after keyword 'type' in type alias"));
+            SkipNewlines();
+            init = ParseExpression(ErrMsg("expression", "after '=' in type alias"));
+            end = init.End;
+            
+            return new PTTypeDecl(beg, end, name, init, directives);
         }
 
         private PTVariableDecl ParseVariableDeclaration(params TokenType[] delimiters)

@@ -32,7 +32,30 @@ namespace Cheez.Compiler.ParseTree
         }
     }
 
-    #region Variable Declaration
+    #region Variable/Type Declaration
+
+    public class PTTypeDecl : PTStatement
+    {
+        public PTIdentifierExpr Name { get; set; }
+        public PTExpr Initializer { get; set; }
+
+        public PTTypeDecl(TokenLocation beg, TokenLocation end, PTIdentifierExpr name, PTExpr init = null, List<PTDirective> directives = null) : base(beg, end, directives)
+        {
+            this.Name = name;
+            this.Initializer = init;
+        }
+
+        public override string ToString()
+        {
+            return $"type {Name} = {Initializer}";
+        }
+
+        public override AstStatement CreateAst()
+        {
+            var dirs = CreateDirectivesAst();
+            return new AstTypeDecl(this, Name.CreateAst() as AstIdentifierExpr, Initializer?.CreateAst(), dirs);
+        }
+    }
 
     public class PTVariableDecl : PTStatement
     {
@@ -266,28 +289,6 @@ namespace Cheez.Compiler.ParseTree
             var mems = Members.Select(m => m.CreateAst()).ToList();
             var dirs = Directives?.Select(d => d.CreateAst()).ToDictionary(d => d.Name);
             return new AstEnumDecl(this, Name.CreateAst() as AstIdentifierExpr, mems, dirs);
-        }
-    }
-
-    #endregion
-
-    #region Type Alias
-
-    public class PTTypeAliasDecl : PTStatement
-    {
-        public PTIdentifierExpr Name { get; set; }
-        public PTExpr Type { get; set; }
-
-        public PTTypeAliasDecl(TokenLocation beg, PTIdentifierExpr name, PTExpr type, List<PTDirective> directives = null) : base(beg, type.End, directives)
-        {
-            this.Name = name;
-            this.Type = type;
-        }
-
-        public override AstStatement CreateAst()
-        {
-            var dirs = CreateDirectivesAst();
-            return new AstTypeAliasDecl(this, Name.CreateAst() as AstIdentifierExpr, Type.CreateAst(), dirs);
         }
     }
 
